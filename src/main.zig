@@ -1,35 +1,61 @@
 const std = @import("std");
+const parsers_term = @import("parsers/term.zig");
 
 const ChatMessage = struct { role: []const u8, content: []const u8 };
 const ChatResponse = struct { model: []const u8, created_at: []const u8, message: ChatMessage, done: bool };
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    var allocator = gpa.allocator();
-    const stdout = std.io.getStdOut();
-    const stdErrWriter = std.io.getStdErr().writer();
-    _ = stdout.write("Input:\n") catch unreachable;
+pub fn main() void {
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    var allocator = arena.allocator();
+
+    const std_err_writer = std.io.getStdErr().writer();
+
+    // get args
+    var args_iter = try std.process.argsWithAllocator(allocator);
+    defer args_iter.deinit();
+    var args_list = std.ArrayList([]const u8).init(allocator);
+    defer args_list.deinit();
+
+    while (true) {
+        const maybe_arg = args_iter.next();
+        if (maybe_arg == null) break;
+        args_list.append(maybe_arg.?) catch |err| {
+            std_err_writer.print("{}", .{err}) catch unreachable;
+        };
+    }
+
+    const programArgs = parsers_term.parseArgs(&allocator, &args_list) catch |err| {
+        std_err_writer.print("{}", .{err}) catch unreachable;
+        return;
+    };
+
+    std.debug.print("{s}", .{programArgs.filepath});
+
+    const stdOutWriter = std.io.getStdOut().writer();
+
+    _ = stdOutWriter.write("Input:\n") catch unreachable;
     var userInputBuffer: [1024_000]u8 = undefined;
 
     var reader = std.io.getStdIn().reader();
     const maybeInput = readUserInput(userInputBuffer[0..], &reader) catch |err| {
-        try stdErrWriter.print("An error occured while parsing input: {}", .{err});
+        std_err_writer.print("An error occured while parsing input: {}", .{err}) catch unreachable;
         return;
     };
     const input = maybeInput orelse {
-        try stdErrWriter.print("No valid input", .{});
+        std_err_writer.print("No valid input", .{}) catch unreachable;
         return;
     };
 
     const payload = createPayload(&allocator, input) catch |err| {
-        try stdErrWriter.print("An error occured while making the request: {}", .{err});
+        std_err_writer.print("An error occured while making the request: {}", .{err}) catch unreachable;
         return;
     };
     defer allocator.free(payload);
 
     std.debug.print("3 {s}", .{payload});
     makeRequest(&allocator, payload) catch |err| {
-        try stdErrWriter.print("An error occured while making the request: {}", .{err});
+        std_err_writer.print("An error occured while making the request: {}", .{err}) catch unreachable;
         return;
     };
 }
@@ -78,6 +104,7 @@ fn makeRequest(allocator: *std.mem.Allocator, payload: []const u8) !void {
 fn readUserInput(buffer: []u8, reader: anytype) !?[]u8 {
     const userInput = try reader.readUntilDelimiterOrEof(buffer, '\n');
     if (userInput) |input| {
+        if (input.len == 0) return userInput;
         return if (input[input.len - 1] == '\n') input[0 .. input.len - 1] else input[0..];
     }
     return userInput;
