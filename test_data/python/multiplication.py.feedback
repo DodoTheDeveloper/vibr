@@ -1,0 +1,30 @@
+def multiplication(a: float, b: float) -> float:
+    """
+    Multiply two floating-point numbers and return the result.
+
+    Args:
+        a (float): The first number to multiply.
+        b (float): The second number to multiply.
+
+    Returns:
+        float: The product of the two numbers.
+    """
+    return a * b
+
+def division(a: float, b: float) -> float:
+    """
+    Divide two floating-point numbers and return the result. Raises an error if division by zero is attempted.
+
+    Args:
+        a (float): The numerator.
+        b (float): The denominator.
+
+    Returns:
+        float: The result of dividing `a` by `b`.
+
+    Raises:
+        ValueError: If `b` is zero, as division by zero is not allowed.
+    """
+    if b == 0:
+        raise ValueError("Can't divide by 0.")
+    return a / b

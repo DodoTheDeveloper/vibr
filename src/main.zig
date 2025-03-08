@@ -1,6 +1,7 @@
 const std = @import("std");
 const parsers_term = @import("parsers/term.zig");
 const utils = @import("utils.zig");
+const prompts_formatter = @import("prompts/formatter.zig");
 
 const ChatMessage = struct { role: []const u8, content: []const u8 };
 const ChatResponse = struct { model: []const u8, created_at: []const u8, message: ChatMessage, done: bool };
@@ -31,30 +32,18 @@ pub fn main() void {
         return;
     };
 
-    std.debug.print("{s}", .{program_args.filepath});
-
-    //const stdOutWriter = std.io.getStdOut().writer();
-
-    //_ = stdOutWriter.write("Input:\n") catch unreachable;
-    //var userInputBuffer: [1024_000]u8 = undefined;
-
-    //var reader = std.io.getStdIn().reader();
-    //const maybeInput = readUserInput(userInputBuffer[0..], &reader) catch |err| {
-    //    std_err_writer.print("An error occured while parsing input: {}", .{err}) catch unreachable;
-    //    return;
-    //};
-    //const input = maybeInput orelse {
-    //    std_err_writer.print("No valid input", .{}) catch unreachable;
-    //    return;
-    //};
-
-    const input = utils.readFile(&allocator, program_args.filepath) catch |err| {
+    const file_content = utils.readFile(&allocator, program_args.filepath) catch |err| {
         std_err_writer.print("{}", .{err}) catch unreachable;
         return;
     };
-    defer allocator.free(input);
+    defer allocator.free(file_content);
 
-    const payload = createPayload(&allocator, input) catch |err| {
+    const formatted_prompt = prompts_formatter.format_code_comment_promt(&allocator, file_content) catch |err| {
+        std_err_writer.print("{}", .{err}) catch unreachable;
+        return;
+    };
+
+    const payload = createPayload(&allocator, formatted_prompt) catch |err| {
         std_err_writer.print("An error occured while making the request: {}", .{err}) catch unreachable;
         return;
     };
@@ -69,6 +58,8 @@ pub fn main() void {
 
 /// Creates the payload for a request.
 fn createPayload(allocator: *std.mem.Allocator, content: []const u8) ![]u8 {
+    const escaped_contet = try utils.escape_json_content(allocator, content);
+    defer allocator.free(escaped_contet);
     const template =
         \\{{
         \\  "model": "hf.co/unsloth/DeepSeek-R1-Distill-Qwen-14B-GGUF:Q4_K_M",
@@ -78,7 +69,8 @@ fn createPayload(allocator: *std.mem.Allocator, content: []const u8) ![]u8 {
         \\  "stream": true
         \\}}
     ;
-    return std.fmt.allocPrint(allocator.*, template, .{content});
+
+    return std.fmt.allocPrint(allocator.*, template, .{escaped_contet});
 }
 
 fn makeRequest(allocator: *std.mem.Allocator, payload: []const u8) !void {

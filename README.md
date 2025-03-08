@@ -21,7 +21,10 @@ curl  http://127.0.0.1:11434/api/chat -d '{
   "stream": false
 }'
 
-## TODO
-[ ] Review a file
- - [ ] Load file and provide as payload
- - [ ] Add review comments
+## Ideas
+- Reviewing and improving docstrings for clarity.
+- Suggesting edge cases for test coverage.
+- Tracking breaking changes and auto-generating changelogs.
+- Recommending how to split large functions into smaller parts.
+- Adding context-aware comments.
+- Detecting and suggesting updates for deprecated code.
