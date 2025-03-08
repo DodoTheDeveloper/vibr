@@ -1,5 +1,6 @@
 const std = @import("std");
 const parsers_term = @import("parsers/term.zig");
+const utils = @import("utils.zig");
 
 const ChatMessage = struct { role: []const u8, content: []const u8 };
 const ChatResponse = struct { model: []const u8, created_at: []const u8, message: ChatMessage, done: bool };
@@ -25,35 +26,41 @@ pub fn main() void {
         };
     }
 
-    const programArgs = parsers_term.parseArgs(&allocator, &args_list) catch |err| {
+    const program_args = parsers_term.parseArgs(&allocator, &args_list) catch |err| {
         std_err_writer.print("{}", .{err}) catch unreachable;
         return;
     };
 
-    std.debug.print("{s}", .{programArgs.filepath});
+    std.debug.print("{s}", .{program_args.filepath});
 
-    const stdOutWriter = std.io.getStdOut().writer();
+    //const stdOutWriter = std.io.getStdOut().writer();
 
-    _ = stdOutWriter.write("Input:\n") catch unreachable;
-    var userInputBuffer: [1024_000]u8 = undefined;
+    //_ = stdOutWriter.write("Input:\n") catch unreachable;
+    //var userInputBuffer: [1024_000]u8 = undefined;
 
-    var reader = std.io.getStdIn().reader();
-    const maybeInput = readUserInput(userInputBuffer[0..], &reader) catch |err| {
-        std_err_writer.print("An error occured while parsing input: {}", .{err}) catch unreachable;
+    //var reader = std.io.getStdIn().reader();
+    //const maybeInput = readUserInput(userInputBuffer[0..], &reader) catch |err| {
+    //    std_err_writer.print("An error occured while parsing input: {}", .{err}) catch unreachable;
+    //    return;
+    //};
+    //const input = maybeInput orelse {
+    //    std_err_writer.print("No valid input", .{}) catch unreachable;
+    //    return;
+    //};
+
+    const input = utils.readFile(&allocator, program_args.filepath) catch |err| {
+        std_err_writer.print("{}", .{err}) catch unreachable;
         return;
     };
-    const input = maybeInput orelse {
-        std_err_writer.print("No valid input", .{}) catch unreachable;
-        return;
-    };
+    defer allocator.free(input);
 
     const payload = createPayload(&allocator, input) catch |err| {
         std_err_writer.print("An error occured while making the request: {}", .{err}) catch unreachable;
         return;
     };
     defer allocator.free(payload);
+    std.debug.print("{s}", .{payload});
 
-    std.debug.print("3 {s}", .{payload});
     makeRequest(&allocator, payload) catch |err| {
         std_err_writer.print("An error occured while making the request: {}", .{err}) catch unreachable;
         return;
@@ -92,7 +99,6 @@ fn makeRequest(allocator: *std.mem.Allocator, payload: []const u8) !void {
     var readBuf: [2048]u8 = undefined;
 
     while (try rdr.readUntilDelimiterOrEof(&readBuf, '\n')) |line| {
-        //std.debug.print("resp: {s}", .{line});
         const parsed = try std.json.parseFromSlice(ChatResponse, allocator.*, line, .{ .ignore_unknown_fields = true });
         defer parsed.deinit();
         const msg: ChatResponse = parsed.value;
