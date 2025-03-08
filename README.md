@@ -1,18 +1,24 @@
 #
+
 ## Start R1 with Ollama native
-* Pull image with Ollama
+
+- Pull image with Ollama
+
 ```bash
 ollama pull hf.co/unsloth/DeepSeek-R1-Distill-Qwen-14B-GGUF:Q4_K_M
 ```
+
 The model hf.co/unsloth/DeepSeek-R1-Distill-Qwen-14B-GGUF:Q4_K_M works nice on a M1 with 32 GB of RAM.
 
-  
 ## Start R1 with Ollama in docker
+
 No TPU support on Mac yet.
 
-docker run -d -v ~/.ollama:/root/.ollama -p 11434:11434 -e OLLAMA_MODEL="hf.co/unsloth/DeepSeek-R1-Distill-Qwen-14B-GGUF:Q4_K_M"  --name ollama ollama/ollama
+docker run -d -v ~/.ollama:/root/.ollama -p 11434:11434 -e OLLAMA_MODEL="hf.co/unsloth/DeepSeek-R1-Distill-Qwen-14B-GGUF:Q4_K_M" --name ollama ollama/ollama
 
 ## Curl
+
+```bash
 curl  http://127.0.0.1:11434/api/chat -d '{
   "model": "hf.co/unsloth/DeepSeek-R1-Distill-Qwen-14B-GGUF:Q4_K_M",
   "messages": [
@@ -20,8 +26,10 @@ curl  http://127.0.0.1:11434/api/chat -d '{
   ],
   "stream": false
 }'
+```
 
 ## Ideas
+
 - Reviewing and improving docstrings for clarity.
 - Suggesting edge cases for test coverage.
 - Tracking breaking changes and auto-generating changelogs.
