@@ -1,0 +1,46 @@
+diff --git a/src/main.zig b/src/main.zig
+index 5f16101..7cd04b4 100644
+--- a/src/main.zig
++++ b/src/main.zig
+@@ -42,10 +42,25 @@ pub fn main() void {
+     };
+     defer allocator.free(formatted_prompt);
+
+-    requests.send_request_to_ollama(&allocator, formatted_prompt) catch |err| {
++    run_git_diff_main(allocator) catch |err| {
+         std_err_writer.print("An error occured while making the request: {}", .{err}) catch unreachable;
+         return;
+     };
++    //requests.send_request_to_ollama(&allocator, formatted_prompt) catch |err| {
++    //    std_err_writer.print("An error occured while making the request: {}", .{err}) catch unreachable;
++    //    return;
++    //};
++
++}
++
++fn run_git_diff_main(allocator: std.mem.Allocator) !void {
++    // Initialize the child process with the command and its arguments.
++    const args: []const []const u8 = &[_][]const u8{ "git", "diff" };
++    const result = try std.process.Child.run(.{ .allocator = allocator, .argv = args });
++    //defer allocator.free(result);
++    // Set behaviors so that stdout and stderr are captured.
++
++    std.debug.print("git diff exited with code {s}\n", .{result.stdout});
+ }
+
+ /// Reads & formats and writes the user input into the provided `buffer`.
+diff --git a/test_data/python/multiplication.py b/test_data/python/multiplication.py
+index f9c5f73..cd3d93b 100644
+--- a/test_data/python/multiplication.py
++++ b/test_data/python/multiplication.py
+@@ -2,6 +2,9 @@ def multiplication(a float, b: float) -> float:
+     return a * b
+
+ def division(a: float, b: float) -> float:
++
+     if b == 0:
+         raise ValueError("Can't divide by 0.")
+     return a / b
++
++
+

@@ -1,5 +1,6 @@
 const std = @import("std");
 const parsers_term = @import("parsers/term.zig");
+const parsers_git = @import("parsers/git.zig");
 const utils = @import("utils.zig");
 const prompts_formatter = @import("prompts/formatter.zig");
 const requests = @import("requests.zig");
@@ -25,27 +26,52 @@ pub fn main() void {
         };
     }
 
-    const program_args = parsers_term.parseArgs(&allocator, &args_list) catch |err| {
-        std_err_writer.print("{}", .{err}) catch unreachable;
+    //const program_args = parsers_term.parseArgs(&allocator, &args_list) catch |err| {
+    //    std_err_writer.print("{}", .{err}) catch unreachable;
+    //    return;
+    //};
+
+    // get git diff
+    const git_diff = run_git_diff_main(allocator) catch |err| {
+        std_err_writer.print("An error occured while running 'git diff': {}", .{err}) catch unreachable;
+        return;
+    };
+    defer allocator.free(git_diff);
+    // get file paths from git diff
+    const file_paths = parsers_git.get_files_paths_from_git_diff(allocator, git_diff) catch |err| {
+        std_err_writer.print("An error occured while parsing the git diff: {}", .{err}) catch unreachable;
         return;
     };
 
-    const file_content = utils.readFile(&allocator, program_args.filepath) catch |err| {
-        std_err_writer.print("{}", .{err}) catch unreachable;
-        return;
-    };
-    defer allocator.free(file_content);
+    for (file_paths) |file_path| {
+        const file_content = utils.readFile(&allocator, file_path) catch |err| {
+            std_err_writer.print("{}", .{err}) catch unreachable;
+            return;
+        };
+        defer allocator.free(file_content);
 
-    const formatted_prompt = prompts_formatter.format_code_comment_promt(&allocator, file_content) catch |err| {
-        std_err_writer.print("{}", .{err}) catch unreachable;
-        return;
-    };
-    defer allocator.free(formatted_prompt);
+        const formatted_prompt = prompts_formatter.format_code_comment_promt(&allocator, file_content) catch |err| {
+            std_err_writer.print("{}", .{err}) catch unreachable;
+            return;
+        };
+        defer allocator.free(formatted_prompt);
 
-    requests.send_request_to_ollama(&allocator, formatted_prompt) catch |err| {
-        std_err_writer.print("An error occured while making the request: {}", .{err}) catch unreachable;
-        return;
-    };
+        requests.send_request_to_ollama(&allocator, formatted_prompt) catch |err| {
+            std_err_writer.print("An error occured while making the request: {}", .{err}) catch unreachable;
+            return;
+        };
+    }
+}
+
+fn run_git_diff_main(allocator: std.mem.Allocator) ![]u8 {
+    // Initialize the child process with the command and its arguments.
+    const args: []const []const u8 = &[_][]const u8{ "git", "diff", "main" };
+    const result = try std.process.Child.run(.{ .allocator = allocator, .argv = args });
+
+    const output: []u8 = try allocator.alloc(u8, result.stdout.len);
+    const stdout = result.stdout;
+    std.mem.copyForwards(u8, output, stdout);
+    return output;
 }
 
 /// Reads & formats and writes the user input into the provided `buffer`.
