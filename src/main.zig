@@ -65,7 +65,7 @@ pub fn main() void {
 
 fn run_git_diff_main(allocator: std.mem.Allocator) ![]u8 {
     // Initialize the child process with the command and its arguments.
-    const args: []const []const u8 = &[_][]const u8{ "git", "diff", "main" };
+    const args: []const []const u8 = &[_][]const u8{ "git", "diff", "--staged" };
     const result = try std.process.Child.run(.{ .allocator = allocator, .argv = args });
 
     const output: []u8 = try allocator.alloc(u8, result.stdout.len);
