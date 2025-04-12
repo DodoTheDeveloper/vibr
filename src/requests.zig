@@ -61,8 +61,7 @@ test "creates payload" {
         \\  "stream": true
         \\}
     ;
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    var allocator = gpa.allocator();
+    var allocator = std.testing.allocator;
 
     const payload = create_payload(&allocator, "my prompt"[0..]) catch unreachable;
     defer allocator.free(payload);

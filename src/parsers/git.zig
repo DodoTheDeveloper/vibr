@@ -18,14 +18,15 @@ pub fn get_files_paths_from_git_diff(allocator: std.mem.Allocator, diff: []const
 }
 
 test "get_files_paths_from_git_diffgets filenames from git diff" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const given_allocator = gpa.allocator();
+    const given_allocator = std.testing.allocator;
 
     const file_path = "./test_data/git_diff_mock.txt";
     const file = try std.fs.cwd().openFile(file_path, .{});
     const given_diff = try file.readToEndAlloc(given_allocator, 2048);
+    defer given_allocator.free(given_diff);
 
     const actual = try get_files_paths_from_git_diff(given_allocator, given_diff);
+    defer given_allocator.free(actual);
     const expected = [_][]const u8{ "src/main.zig", "test_data/python/multiplication.py" };
     try std.testing.expectEqual(expected.len, actual.len);
 
@@ -36,12 +37,11 @@ test "get_files_paths_from_git_diffgets filenames from git diff" {
 }
 
 test "get_files_paths_from_git_diffgets returns empty list when no diff" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const given_allocator = gpa.allocator();
-
+    const given_allocator = std.testing.allocator;
     const given_diff = "";
 
     const actual = try get_files_paths_from_git_diff(given_allocator, given_diff);
+    defer given_allocator.free(actual);
     const expected = [_][]const u8{};
     try std.testing.expectEqual(expected.len, actual.len);
 
