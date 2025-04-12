@@ -7,11 +7,13 @@ const utils = @import("utils.zig");
 const prompts_formatter = @import("prompts/formatter.zig");
 const requests = @import("requests.zig");
 const testing = std.testing;
+const main = @import("main.zig");
 
 // Import & add modules where tests should automatically run with the command:
 //     `zig build test --summary new`
 // Why? -> https://ziggit.dev/t/how-do-i-get-zig-build-to-run-all-the-tests/4434/3
 test "run all tests" {
+    _ = main;
     _ = parsers_python;
     _ = parsers_term;
     _ = parsers_git;

@@ -50,7 +50,7 @@ pub fn main() void {
         };
         defer allocator.free(file_content);
 
-        const formatted_prompt = prompts_formatter.format_code_comment_promt(&allocator, file_content) catch |err| {
+        const formatted_prompt = prompts_formatter.format_code_comment_promt(allocator, file_content) catch |err| {
             std_err_writer.print("{}", .{err}) catch unreachable;
             return;
         };
