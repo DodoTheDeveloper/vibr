@@ -16,7 +16,7 @@ const FileData = struct {
     }
 };
 
-const PythonNode = struct {
+pub const PythonNode = struct {
     parent: ?*PythonNode = null,
     children: std.ArrayList(*PythonNode),
     node_type: PythonNodeType,

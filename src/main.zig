@@ -1,8 +1,10 @@
 const std = @import("std");
 const parsers_term = @import("parsers/term.zig");
 const parsers_git = @import("parsers/git.zig");
+const parsers_python = @import("parsers/python.zig");
 const utils = @import("utils.zig");
 const prompts_formatter = @import("prompts/formatter.zig");
+
 const requests = @import("requests.zig");
 
 pub fn main() void {
@@ -48,6 +50,9 @@ pub fn main() void {
             std_err_writer.print("{}", .{err}) catch unreachable;
             return;
         };
+        if (std.mem.endsWith(u8, file_path, ".py")) {
+            parsers_python.parseFile(allocator, file_content);
+        }
         defer allocator.free(file_content);
 
         const formatted_prompt = prompts_formatter.format_code_comment_promt(allocator, file_content) catch |err| {
@@ -65,7 +70,7 @@ pub fn main() void {
 
 fn run_git_diff_main(allocator: std.mem.Allocator) ![]u8 {
     // Initialize the child process with the command and its arguments.
-    const args: []const []const u8 = &[_][]const u8{ "git", "diff", "--staged" };
+    const args: []const []const u8 = &[_][]const u8{ "git", "diff", "-U0", "--staged" };
     const result = try std.process.Child.run(.{ .allocator = allocator, .argv = args });
 
     const output: []u8 = try allocator.alloc(u8, result.stdout.len);
