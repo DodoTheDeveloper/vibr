@@ -1,7 +1,7 @@
 const std = @import("std");
 
-pub fn escape_json_content(allocator: *std.mem.Allocator, input: []const u8) ![]const u8 {
-    var out = std.ArrayList(u8).init(allocator.*);
+pub fn escape_json_content(allocator: std.mem.Allocator, input: []const u8) ![]const u8 {
+    var out = std.ArrayList(u8).init(allocator);
     // Loop through each character in the input.
     for (input) |c| {
         switch (c) {
@@ -16,28 +16,26 @@ pub fn escape_json_content(allocator: *std.mem.Allocator, input: []const u8) ![]
     return try out.toOwnedSlice();
 }
 
-pub fn readFile(allocator: *std.mem.Allocator, file_path: []const u8) ![]const u8 {
+pub fn readFile(allocator: std.mem.Allocator, file_path: []const u8) ![]const u8 {
     const HUNDRED_MEGABYTE = 1024 * 1000 * 100;
     const file = try std.fs.cwd().openFile(file_path, .{});
-    const content = try file.readToEndAlloc(allocator.*, HUNDRED_MEGABYTE);
+    const content = try file.readToEndAlloc(allocator, HUNDRED_MEGABYTE);
     return content;
 }
 
 test "escape json content" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    var given_allocator = gpa.allocator();
+    const given_allocator = std.testing.allocator;
 
     // a\b"c' should be escaped as a\\b\"c\'
-    const actual = try escape_json_content(&given_allocator, "a\\b\"c");
+    const actual = try escape_json_content(given_allocator, "a\\b\"c");
     try std.testing.expectEqualSlices(u8, "a\\\\b\\\"c", actual);
 }
 
 test "reads file" {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    var given_allocator = gpa.allocator();
+    const given_allocator = std.testing.allocator;
 
     const file_path = "./test_data/small.txt";
-    const actual = try readFile(&given_allocator, file_path);
+    const actual = try readFile(given_allocator, file_path);
     const expected = "small\"\n";
     try std.testing.expectEqualSlices(u8, expected, actual);
 }
