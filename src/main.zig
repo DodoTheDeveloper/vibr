@@ -7,6 +7,7 @@ const requests = @import("requests.zig");
 
 pub fn main() void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    const std_out_writer = std.io.getStdOut().writer();
     defer arena.deinit();
     var allocator = arena.allocator();
 
@@ -44,7 +45,8 @@ pub fn main() void {
     };
 
     for (file_paths) |file_path| {
-        const file_content = utils.readFile(&allocator, file_path) catch |err| {
+        std_out_writer.print("Processing {s}\n", .{file_path}) catch unreachable;
+        const file_content = utils.readFile(allocator, file_path) catch |err| {
             std_err_writer.print("{}", .{err}) catch unreachable;
             return;
         };
@@ -56,10 +58,12 @@ pub fn main() void {
         };
         defer allocator.free(formatted_prompt);
 
-        requests.send_request_to_ollama(&allocator, formatted_prompt) catch |err| {
+        const request_buffer = requests.send_request_to_ollama(allocator, formatted_prompt) catch |err| {
             std_err_writer.print("An error occured while making the request: {}", .{err}) catch unreachable;
             return;
         };
+        defer request_buffer.destroy(allocator);
+        std_out_writer.print("{s}\n", .{request_buffer.getMessage()}) catch unreachable;
     }
 }
 
