@@ -5,9 +5,9 @@ const DeepSeekR1ResponseBuffer = @import("models/DeepSeekR1ResponseBuffer.zig").
 pub const ChatMessage = struct { role: []const u8, content: []const u8 };
 pub const ChatResponse = struct { model: []const u8, created_at: []const u8, message: ChatMessage, done: bool };
 
-pub fn send_request_to_ollama(allocator: std.mem.Allocator, prompt: []const u8) !void {
+pub fn send_request_to_ollama(allocator: std.mem.Allocator, prompt: []const u8) !*DeepSeekR1ResponseBuffer {
     const payload = try create_payload(allocator, prompt);
-    _ = try make_request(allocator, payload);
+    return try make_request(allocator, payload);
 }
 
 fn make_request(allocator: std.mem.Allocator, payload: []const u8) !*DeepSeekR1ResponseBuffer {
@@ -33,7 +33,6 @@ fn make_request(allocator: std.mem.Allocator, payload: []const u8) !*DeepSeekR1R
         defer parsed.deinit();
 
         try requestBuffer.*.appendMessage(allocator, parsed.value.message.content);
-        std.debug.print("{s}", .{parsed.value.message.content});
     }
     return requestBuffer;
 }
