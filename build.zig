@@ -15,6 +15,13 @@ pub fn build(b: *std.Build) void {
     // set a preferred release mode, allowing the user to decide how to optimize.
     const optimize = b.standardOptimizeOption(.{});
 
+    const target_os = target.result.os.tag;
+    const host_os = b.graph.host.result.os.tag;
+    const arch = target.result.cpu.arch;
+    const ONNX_VERSION = "1.21.0";
+    const ONNX_DIR = "onnxruntime/onnxruntime-osx-universal2-" ++ ONNX_VERSION;
+    const ONNX_URL = "https://sourceforge.net/projects/onnx-runtime.mirror/files/v" ++ ONNX_VERSION ++ "/onnxruntime-osx-universal2-" ++ ONNX_VERSION ++ ".tgz/download";
+
     const lib = b.addStaticLibrary(.{
         .name = "cabal",
         // In this case the main source file is merely a path, however, in more
@@ -29,12 +36,43 @@ pub fn build(b: *std.Build) void {
     // running `zig build`).
     b.installArtifact(lib);
 
+    // workaround on macos, in order set rpath correct as zig build doesn't yet support adding args to builder.
+    if (target_os == .macos and arch == .aarch64 and host_os == .macos) {} else {
+        std.debug.panic("Unsupported OS / arch {}, {}", .{ target_os, arch });
+    }
+
     const exe = b.addExecutable(.{
         .name = "cabal",
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
+
+    var onnx_header_path_lazy = b.path("");
+    var onnx_lib_path_lazy = b.path("");
+    if (target_os == .macos and arch == .aarch64 and host_os == .macos) {
+        // download onnxruntime if not present
+        const fetch_step = b.addSystemCommand(&[_][]const u8{
+            "bash",
+            "-c",
+            // single-line shell script:
+            "if [ ! -d \"" ++ ONNX_DIR ++ "\" ]; then " ++
+                "mkdir -p onnxruntime && " ++
+                "curl -L " ++ ONNX_URL ++ " | tar xz -C onnxruntime; " ++
+                "fi",
+        });
+        // Name the step so it shows up in `zig build --help`.
+        fetch_step.step.name = "fetch-onnx";
+        exe.step.dependOn(&fetch_step.step);
+
+        onnx_header_path_lazy = b.path("onnxruntime/onnxruntime-osx-universal2-1.21.0/include");
+        const onnx_lib_path = "onnxruntime/onnxruntime-osx-universal2-1.21.0/lib";
+        onnx_lib_path_lazy = b.path(onnx_lib_path);
+        exe.addRPath(b.path("@loader_path/../" ++ onnx_lib_path));
+    }
+    exe.addIncludePath(onnx_header_path_lazy);
+    exe.addLibraryPath(onnx_lib_path_lazy);
+    exe.linkSystemLibrary("onnxruntime");
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
