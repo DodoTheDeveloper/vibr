@@ -19,6 +19,7 @@ pub fn escape_json_content(allocator: std.mem.Allocator, input: []const u8) ![]c
 pub fn readFile(allocator: std.mem.Allocator, file_path: []const u8) ![]const u8 {
     const HUNDRED_MEGABYTE = 1024 * 1000 * 100;
     const file = try std.fs.cwd().openFile(file_path, .{});
+    defer file.close();
     const content = try file.readToEndAlloc(allocator, HUNDRED_MEGABYTE);
     return content;
 }
@@ -28,6 +29,7 @@ test "escape json content" {
 
     // a\b"c' should be escaped as a\\b\"c\'
     const actual = try escape_json_content(given_allocator, "a\\b\"c");
+    defer given_allocator.free(actual);
     try std.testing.expectEqualSlices(u8, "a\\\\b\\\"c", actual);
 }
 
@@ -36,6 +38,7 @@ test "reads file" {
 
     const file_path = "./test_data/small.txt";
     const actual = try readFile(given_allocator, file_path);
+    defer given_allocator.free(actual);
     const expected = "small\"\n";
     try std.testing.expectEqualSlices(u8, expected, actual);
 }
