@@ -50,7 +50,10 @@ pub fn build(b: *std.Build) void {
 
     var onnx_header_path_lazy = b.path("");
     var onnx_lib_path_lazy = b.path("");
+
+    //zig build -Dtarget=aarch64-macos
     if (target_os == .macos and arch == .aarch64 and host_os == .macos) {
+
         // download onnxruntime if not present
         const fetch_step = b.addSystemCommand(&[_][]const u8{
             "bash",
