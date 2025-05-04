@@ -1,4 +1,5 @@
 const std = @import("std");
+const encoder = @import("./../utils/byte_to_unicode_gpt2.zig").create_bytes_to_unicode_map_gpt2;
 
 pub const Tokenizer = struct {
     vocab_path: []const u8,
@@ -93,7 +94,7 @@ pub const Tokenizer = struct {
             const a = trimmed[0..idx];
             const b = std.mem.trim(u8, trimmed[idx + 1 ..], " \t\r\n");
             // Insert into the two-level map: merges[a][b] = priority
-            if (self.merges.get(a)) |inner| {
+            if (self.*.merges.get(a)) |inner| {
                 const bdup = try allocator.dupe(u8, b);
                 try inner.put(bdup, prio);
             } else {
@@ -101,7 +102,7 @@ pub const Tokenizer = struct {
                 const adup = try allocator.dupe(u8, a);
                 const bdup = try allocator.dupe(u8, b);
                 try newInner.put(bdup, prio);
-                try self.merges.put(adup, newInner);
+                try self.*.merges.put(adup, newInner);
             }
             prio += 1;
         }
@@ -116,30 +117,36 @@ pub const Tokenizer = struct {
         var arena = std.heap.ArenaAllocator.init(allocator);
         const aalloc = arena.allocator();
 
-        //const normalized_input = try aalloc.alloc(u8, input.len);
+        // normalize input data
+        var normalized_input_list = std.ArrayList(u8).init(allocator);
+        defer normalized_input_list.deinit();
+        const normalizer_ptr = try encoder(allocator);
+        defer {
+            for (normalizer_ptr.*) |entry| {
+                allocator.free(entry);
+            }
+            allocator.destroy(normalizer_ptr);
+        }
 
-        //for (input, 1..input.len + 1) |char, index| {
-        //    if (char == ' ') {
-        //        normalized_input[index + 1] = 'Ġ';
-        //    } else {
-        //        normalized_input[index + 1] = char;
-        //    }
-        //}
+        for (input) |char| {
+            const codepoint = normalizer_ptr.*[char];
+            for (codepoint) |byte| {
+                try normalized_input_list.append(byte);
+            }
+        }
 
+        const normalized_input = normalized_input_list.items;
         // Prepend space to input.
-        const prefixed_len = input.len + 1;
-        const prefixed = try aalloc.alloc(u8, prefixed_len);
-        prefixed[0] = 0x20;
-        std.mem.copyForwards(u8, prefixed[1..], input);
 
+        std.debug.print("[DODO] Normalized input {s}\n", .{normalized_input});
         // Build initial one-byte parts.
         var parts = std.ArrayList([]u8).init(aalloc);
-        for (prefixed) |c| {
+        for (normalized_input) |c| {
             const slice = try aalloc.alloc(u8, 1);
             slice[0] = c;
             try parts.append(slice);
         }
-        std.debug.print("parts: {any}\n", .{parts.items});
+        std.debug.print("parts: {s}\n", .{parts.items});
 
         // BPE merge loop with O(1) lookup.
         var changed = true;
@@ -150,12 +157,14 @@ pub const Tokenizer = struct {
             for (0..parts.items.len - 1) |i| {
                 const x = parts.items[i];
                 const y = parts.items[i + 1];
-                if (self.merges.get(x)) |inner| {
+                std.debug.print("loop x {s} y {s}\n", .{ x, y });
+                if (self.*.merges.get(x)) |inner| {
                     if (inner.get(y)) |p| {
                         if (p < best_p) {
                             best_p = p;
                             best_i = i;
                             changed = true;
+                            std.debug.print("found merge: best_p {d} best_i {d}\n", .{ best_p, best_i });
                         }
                     }
                 }
@@ -168,9 +177,11 @@ pub const Tokenizer = struct {
                 std.mem.copyForwards(u8, merged[first.len..], second);
                 _ = parts.orderedRemove(best_i + 1);
                 parts.items[best_i] = merged;
+                std.debug.print("changed: first {s} second {s} merged {s}\n", .{ first, second, merged });
             }
         }
 
+        std.debug.print("after merge parts {s} {x}\n", .{ parts.items, parts.items });
         // Map to IDs using provided allocator for output.
         var out = std.ArrayList(u32).init(aalloc);
         for (parts.items) |p| {
@@ -208,11 +219,11 @@ test "tokenize aaa b" {
     try given_tokenizer_ptr.*.merges.put("a", inner_0); // rule a -> a
 
     var inner_1 = std.StringHashMap(usize).init(given_allocator);
-    try inner_1.put("aa", 1);
+    try inner_1.put("a", 1);
     try given_tokenizer_ptr.*.merges.put("aa", inner_1);
 
     // 2) The input string to test
-    const given_input = "aaa b";
+    const given_input = "aaab";
 
     // 3) The expected token ID sequence
     //    You need to run the real tokenizer once (e.g., in Python) to know these IDs.
