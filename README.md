@@ -28,6 +28,12 @@ curl  http://127.0.0.1:11434/api/chat -d '{
 }'
 ```
 
+## Build & test
+
+### MacOS aarch64 (M series)
+* Build: `zig build -Dtarget=aarch64-macos`
+* Build & Test: `zig build -Dtarget=aarch64-macos test --summary new`
+
 ## Ideas
 
 - Reviewing and improving docstrings for clarity.
