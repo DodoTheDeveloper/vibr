@@ -10,6 +10,8 @@ const requests = @import("requests.zig");
 const testing = std.testing;
 const main = @import("main.zig");
 const models_deep_seek_r1_response_buffer = @import("models/DeepSeekR1ResponseBuffer.zig");
+const byte_level_byte_pair_encoding_tokenizer = @import("tokenizers/ByteLeveLBytePairEncodingTokenizer.zig");
+const byte_to_unicode_gpt2 = @import("./utils/byte_to_unicode_gpt2.zig");
 
 // Import & add modules where tests should automatically run with the command:
 //     `zig build test --summary new`
@@ -25,4 +27,6 @@ test "run all tests" {
     _ = requests;
     _ = utils_slices;
     _ = models_deep_seek_r1_response_buffer;
+    _ = byte_level_byte_pair_encoding_tokenizer;
+    _ = byte_to_unicode_gpt2;
 }
