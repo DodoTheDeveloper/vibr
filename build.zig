@@ -1,5 +1,6 @@
 const std = @import("std");
 
+<<<<<<< Updated upstream
 // Although this function looks imperative, note that its job is to
 // declaratively construct a build graph that will be executed by an external
 // runner.
@@ -19,27 +20,12 @@ pub fn build(b: *std.Build) void {
     const host_os = b.graph.host.result.os.tag;
     const arch = target.result.cpu.arch;
     const ONNX_VERSION = "1.21.0";
+=======
+const ONNX_VERSION = "1.20.1";
+fn build_mac_os(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
+>>>>>>> Stashed changes
     const ONNX_DIR = "onnxruntime/onnxruntime-osx-universal2-" ++ ONNX_VERSION;
     const ONNX_URL = "https://sourceforge.net/projects/onnx-runtime.mirror/files/v" ++ ONNX_VERSION ++ "/onnxruntime-osx-universal2-" ++ ONNX_VERSION ++ ".tgz/download";
-
-    const lib = b.addStaticLibrary(.{
-        .name = "cabal",
-        // In this case the main source file is merely a path, however, in more
-        // complicated build scripts, this could be a generated file.
-        .root_source_file = b.path("src/root.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-
-    // This declares intent for the library to be installed into the standard
-    // location when the user invokes the "install" step (the default step when
-    // running `zig build`).
-    b.installArtifact(lib);
-
-    // workaround on macos, in order set rpath correct as zig build doesn't yet support adding args to builder.
-    if (target_os == .macos and arch == .aarch64 and host_os == .macos) {} else {
-        std.debug.panic("Unsupported OS / arch {}, {}", .{ target_os, arch });
-    }
 
     const exe = b.addExecutable(.{
         .name = "cabal",
@@ -51,9 +37,21 @@ pub fn build(b: *std.Build) void {
     var onnx_header_path_lazy = b.path("");
     var onnx_lib_path_lazy = b.path("");
 
-    //zig build -Dtarget=aarch64-macos
-    if (target_os == .macos and arch == .aarch64 and host_os == .macos) {
+    // download onnxruntime if not present
+    const fetch_step = b.addSystemCommand(&[_][]const u8{
+        "bash",
+        "-c",
+        // single-line shell script:
+        "if [ ! -d \"" ++ ONNX_DIR ++ "\" ]; then " ++
+            "mkdir -p onnxruntime && " ++
+            "curl -L " ++ ONNX_URL ++ " | tar xz -C onnxruntime; " ++
+            "fi",
+    });
+    // Name the step so it shows up in `zig build --help`.
+    fetch_step.step.name = "fetch-onnx";
+    exe.step.dependOn(&fetch_step.step);
 
+<<<<<<< Updated upstream
         // download onnxruntime if not present
         const fetch_step = b.addSystemCommand(&[_][]const u8{
             "bash",
@@ -73,6 +71,12 @@ pub fn build(b: *std.Build) void {
         onnx_lib_path_lazy = b.path(onnx_lib_path);
         exe.addRPath(b.path("@loader_path/../" ++ onnx_lib_path));
     }
+=======
+    onnx_header_path_lazy = b.path("onnxruntime/onnxruntime-osx-universal2-" ++ ONNX_VERSION ++ "/include");
+    const onnx_lib_path = "onnxruntime/onnxruntime-osx-universal2-" ++ ONNX_VERSION ++ "/lib";
+    onnx_lib_path_lazy = b.path(onnx_lib_path);
+    exe.addRPath(b.path("@loader_path/../" ++ onnx_lib_path));
+>>>>>>> Stashed changes
     exe.addIncludePath(onnx_header_path_lazy);
     exe.addLibraryPath(onnx_lib_path_lazy);
     exe.linkSystemLibrary("onnxruntime");
@@ -113,6 +117,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    exe.addRPath(b.path("@loader_path/../" ++ onnx_lib_path));
+    lib_unit_tests.addRPath(b.path("@loader_path/../" ++ onnx_lib_path));
+    lib_unit_tests.addIncludePath(onnx_header_path_lazy);
+    lib_unit_tests.addLibraryPath(onnx_lib_path_lazy);
+    lib_unit_tests.linkSystemLibrary("onnxruntime");
+
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
 
     const exe_unit_tests = b.addTest(.{
@@ -129,4 +139,31 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run unit tests");
     test_step.dependOn(&run_lib_unit_tests.step);
     test_step.dependOn(&run_exe_unit_tests.step);
+}
+
+// Although this function looks imperative, note that its job is to
+// declaratively construct a build graph that will be executed by an external
+// runner.
+pub fn build(b: *std.Build) void {
+    // Standard target options allows the person running `zig build` to choose
+    // what target to build for. Here we do not override the defaults, which
+    // means any target is allowed, and the default is native. Other options
+    // for restricting supported target set are available.
+    const target = b.standardTargetOptions(.{});
+
+    // Standard optimization options allow the person running `zig build` to select
+    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
+    // set a preferred release mode, allowing the user to decide how to optimize.
+    const optimize = b.standardOptimizeOption(.{});
+
+    const target_os = target.result.os.tag;
+    const host_os = b.graph.host.result.os.tag;
+    const arch = target.result.cpu.arch;
+
+    // workaround on macos, in order set rpath correct as zig build doesn't yet support adding args to builder.
+    if (target_os == .macos and arch == .aarch64 and host_os == .macos) {
+        build_mac_os(b, target, optimize);
+    } else {
+        std.debug.panic("Unsupported OS / arch {}, {}", .{ target_os, arch });
+    }
 }
