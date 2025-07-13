@@ -4,67 +4,72 @@ const parsers_git = @import("parsers/git.zig");
 const utils = @import("utils.zig");
 const prompts_formatter = @import("prompts/formatter.zig");
 const requests = @import("requests.zig");
+const onnx = @import("onnx.zig");
 
 pub fn main() void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
-    const std_out_writer = std.io.getStdOut().writer();
     defer arena.deinit();
-    var allocator = arena.allocator();
+    const allocator = arena.allocator();
 
+    //const std_out_writer = std.io.getStdOut().writer();
     const std_err_writer = std.io.getStdErr().writer();
 
-    // get args
-    var args_iter = try std.process.argsWithAllocator(allocator);
-    defer args_iter.deinit();
-    var args_list = std.ArrayList([]const u8).init(allocator);
-    defer args_list.deinit();
+    const prompt: []const i64 = &[_]i64{ 1, 2, 3 };
+    onnx.run(allocator, "/Users/dominicschablas/dev/cabal/Qwen3-06B-ONNX.onnx", prompt) catch |err| {
+        std_err_writer.print("{}", .{err}) catch unreachable;
+    };
+    //// get args
+    //var args_iter = try std.process.argsWithAllocator(allocator);
+    //defer args_iter.deinit();
+    //var args_list = std.ArrayList([]const u8).init(allocator);
+    //defer args_list.deinit();
 
-    while (true) {
-        const maybe_arg = args_iter.next();
-        if (maybe_arg == null) break;
-        args_list.append(maybe_arg.?) catch |err| {
-            std_err_writer.print("{}", .{err}) catch unreachable;
-        };
-    }
+    //while (true) {
+    //    const maybe_arg = args_iter.next();
+    //    if (maybe_arg == null) break;
+    //    args_list.append(maybe_arg.?) catch |err| {
+    //        std_err_writer.print("{}", .{err}) catch unreachable;
+    //    };
+    //}
 
-    //const program_args = parsers_term.parseArgs(&allocator, &args_list) catch |err| {
-    //    std_err_writer.print("{}", .{err}) catch unreachable;
+    ////const program_args = parsers_term.parseArgs(&allocator, &args_list) catch |err| {
+    ////    std_err_writer.print("{}", .{err}) catch unreachable;
+    ////    return;
+    ////};
+
+    //// get git diff
+    //const git_diff = run_git_diff_main(allocator) catch |err| {
+    //    std_err_writer.print("An error occured while running 'git diff': {}", .{err}) catch unreachable;
+    //    return;
+    //};
+    //defer allocator.free(git_diff);
+    //// get file paths from git diff
+    //const file_paths = parsers_git.get_files_paths_from_git_diff(allocator, git_diff) catch |err| {
+    //    std_err_writer.print("An error occured while parsing the git diff: {}", .{err}) catch unreachable;
     //    return;
     //};
 
-    // get git diff
-    const git_diff = run_git_diff_main(allocator) catch |err| {
-        std_err_writer.print("An error occured while running 'git diff': {}", .{err}) catch unreachable;
-        return;
-    };
-    defer allocator.free(git_diff);
-    // get file paths from git diff
-    const file_paths = parsers_git.get_files_paths_from_git_diff(allocator, git_diff) catch |err| {
-        std_err_writer.print("An error occured while parsing the git diff: {}", .{err}) catch unreachable;
-        return;
-    };
+    //for (file_paths) |file_path| {
+    //    std_out_writer.print("Processing {s}\n", .{file_path}) catch unreachable;
+    //    const file_content = utils.readFile(allocator, file_path) catch |err| {
+    //        std_err_writer.print("{}", .{err}) catch unreachable;
+    //        return;
+    //    };
+    //    defer allocator.free(file_content);
 
-    for (file_paths) |file_path| {
-        std_out_writer.print("Processing {s}\n", .{file_path}) catch unreachable;
-        const file_content = utils.readFile(allocator, file_path) catch |err| {
-            std_err_writer.print("{}", .{err}) catch unreachable;
-            return;
-        };
-        defer allocator.free(file_content);
+    //    const formatted_prompt = prompts_formatter.format_code_comment_promt(allocator, file_content) catch |err| {
+    //        std_err_writer.print("{}", .{err}) catch unreachable;
+    //        return;
+    //    };
+    //    defer allocator.free(formatted_prompt);
 
-        const formatted_prompt = prompts_formatter.format_code_comment_promt(allocator, file_content) catch |err| {
-            std_err_writer.print("{}", .{err}) catch unreachable;
-            return;
-        };
-        defer allocator.free(formatted_prompt);
-
-        const request_buffer = requests.send_request_to_ollama(allocator, formatted_prompt) catch |err| {
-            std_err_writer.print("An error occured while making the request: {}", .{err}) catch unreachable;
-            return;
-        };
-        defer request_buffer.destroy(allocator);
-        std_out_writer.print("{s}\n", .{request_buffer.getMessage()}) catch unreachable;
-    }
+    //    const request_buffer = requests.send_request_to_ollama(allocator, formatted_prompt) catch |err| {
+    //        std_err_writer.print("An error occured while making the request: {}", .{err}) catch unreachable;
+    //        return;
+    //    };
+    //    defer request_buffer.destroy(allocator);
+    //    std_out_writer.print("{s}\n", .{request_buffer.getMessage()}) catch unreachable;
+    //}
 }
 
 fn run_git_diff_main(allocator: std.mem.Allocator) ![]u8 {

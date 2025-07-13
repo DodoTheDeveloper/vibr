@@ -1,29 +1,7 @@
 const std = @import("std");
 
-<<<<<<< Updated upstream
-// Although this function looks imperative, note that its job is to
-// declaratively construct a build graph that will be executed by an external
-// runner.
-pub fn build(b: *std.Build) void {
-    // Standard target options allows the person running `zig build` to choose
-    // what target to build for. Here we do not override the defaults, which
-    // means any target is allowed, and the default is native. Other options
-    // for restricting supported target set are available.
-    const target = b.standardTargetOptions(.{});
-
-    // Standard optimization options allow the person running `zig build` to select
-    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall. Here we do not
-    // set a preferred release mode, allowing the user to decide how to optimize.
-    const optimize = b.standardOptimizeOption(.{});
-
-    const target_os = target.result.os.tag;
-    const host_os = b.graph.host.result.os.tag;
-    const arch = target.result.cpu.arch;
-    const ONNX_VERSION = "1.21.0";
-=======
 const ONNX_VERSION = "1.20.1";
 fn build_mac_os(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
->>>>>>> Stashed changes
     const ONNX_DIR = "onnxruntime/onnxruntime-osx-universal2-" ++ ONNX_VERSION;
     const ONNX_URL = "https://sourceforge.net/projects/onnx-runtime.mirror/files/v" ++ ONNX_VERSION ++ "/onnxruntime-osx-universal2-" ++ ONNX_VERSION ++ ".tgz/download";
 
@@ -51,32 +29,10 @@ fn build_mac_os(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.b
     fetch_step.step.name = "fetch-onnx";
     exe.step.dependOn(&fetch_step.step);
 
-<<<<<<< Updated upstream
-        // download onnxruntime if not present
-        const fetch_step = b.addSystemCommand(&[_][]const u8{
-            "bash",
-            "-c",
-            // single-line shell script:
-            "if [ ! -d \"" ++ ONNX_DIR ++ "\" ]; then " ++
-                "mkdir -p onnxruntime && " ++
-                "curl -L " ++ ONNX_URL ++ " | tar xz -C onnxruntime; " ++
-                "fi",
-        });
-        // Name the step so it shows up in `zig build --help`.
-        fetch_step.step.name = "fetch-onnx";
-        exe.step.dependOn(&fetch_step.step);
-
-        onnx_header_path_lazy = b.path("onnxruntime/onnxruntime-osx-universal2-1.21.0/include");
-        const onnx_lib_path = "onnxruntime/onnxruntime-osx-universal2-1.21.0/lib";
-        onnx_lib_path_lazy = b.path(onnx_lib_path);
-        exe.addRPath(b.path("@loader_path/../" ++ onnx_lib_path));
-    }
-=======
     onnx_header_path_lazy = b.path("onnxruntime/onnxruntime-osx-universal2-" ++ ONNX_VERSION ++ "/include");
     const onnx_lib_path = "onnxruntime/onnxruntime-osx-universal2-" ++ ONNX_VERSION ++ "/lib";
     onnx_lib_path_lazy = b.path(onnx_lib_path);
     exe.addRPath(b.path("@loader_path/../" ++ onnx_lib_path));
->>>>>>> Stashed changes
     exe.addIncludePath(onnx_header_path_lazy);
     exe.addLibraryPath(onnx_lib_path_lazy);
     exe.linkSystemLibrary("onnxruntime");
